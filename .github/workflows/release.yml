@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
 jobs:
@@ -22,6 +23,13 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - run: npm ci
+
+      - name: Sync version dynamically from git tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Setting dynamic release version to: $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
       - run: npm run typecheck
       - run: npm run build
       - run: npm publish --provenance --access public
