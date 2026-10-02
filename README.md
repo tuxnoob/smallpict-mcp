@@ -10,6 +10,8 @@ This MCP server equips AI coding assistants (such as **Claude Desktop**, **Curso
 
 1. **`smallpict_optimize_image`**:
    - Compresses local image files or remote URLs to **WebP** or **AVIF**.
+   - Supports **Lossy** (`quality: 1-100`) and **Lossless** (`lossless: true`) modes.
+   - Downscaling constraints: `maxDimension` (longest edge), `maxWidth`, and `maxHeight`.
    - Automatically writes the optimized image back to the workspace if `outputPath` is provided.
    - Outputs full telemetry: original size, compressed size, and percentage saved (up to 85%).
 2. **`smallpict_get_quota`**:

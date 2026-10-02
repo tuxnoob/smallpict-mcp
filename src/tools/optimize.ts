@@ -7,8 +7,10 @@ export const optimizeSchema = {
   filePath: z.string().describe('Local file path or remote image URL (http/https) to optimize'),
   format: z.enum(['webp', 'avif', 'auto']).default('webp').describe('Target image format (webp, avif, or auto)'),
   quality: z.number().min(1).max(100).default(80).optional().describe('Compression quality (1-100, default: 80)'),
+  maxDimension: z.number().positive().optional().describe('Optional maximum bounding dimension (longest edge) in pixels for image downscaling'),
   maxWidth: z.number().positive().optional().describe('Optional maximum width in pixels for image resizing'),
   maxHeight: z.number().positive().optional().describe('Optional maximum height in pixels for image resizing'),
+  lossless: z.boolean().default(false).optional().describe('Enable lossless compression mode (pixel-perfect fidelity, ignores quality)'),
   outputPath: z.string().optional().describe('Optional local path where the optimized image should be saved'),
 };
 
@@ -34,15 +36,20 @@ export async function handleOptimize(args: {
   filePath: string;
   format?: 'webp' | 'avif' | 'auto';
   quality?: number;
+  maxDimension?: number;
   maxWidth?: number;
   maxHeight?: number;
+  lossless?: boolean;
   outputPath?: string;
 }) {
   const client = getSmallPictClient();
   const format = args.format || 'webp';
   const quality = args.quality ?? 80;
+  const lossless = args.lossless ?? false;
 
-  console.error(`[smallpict-mcp] Optimizing image: ${args.filePath} -> ${format} (q=${quality})`);
+  console.error(
+    `[smallpict-mcp] Optimizing image: ${args.filePath} -> ${format} (q=${quality}, lossless=${lossless}${args.maxDimension ? `, maxDim=${args.maxDimension}` : ''})`
+  );
 
   let isRemote = args.filePath.startsWith('http://') || args.filePath.startsWith('https://');
   let source: string | Uint8Array;
@@ -66,7 +73,9 @@ export async function handleOptimize(args: {
     quality,
     maxWidth: args.maxWidth,
     maxHeight: args.maxHeight,
-  });
+    lossless,
+    ...(args.maxDimension ? { maxDimension: args.maxDimension } : {}),
+  } as any);
 
   let savedMessage = '';
   if (args.outputPath && result.url) {
@@ -93,6 +102,7 @@ export async function handleOptimize(args: {
         text: `### ✅ SmallPict Image Optimization Succeeded
 - **File**: \`${filename}\`
 - **Output Format**: \`${result.format}\`
+- **Compression Mode**: \`${lossless ? 'Lossless (Pixel-Perfect)' : `Lossy (q=${quality})`}\`${args.maxDimension ? `\n- **Max Dimension Constraint**: \`${args.maxDimension}px\`` : ''}
 - **Original Size**: ${formattedOriginal}
 - **Optimized Size**: ${formattedCompressed}
 - **Bandwidth Savings**: **-${result.savingsPercentage}%** (${((result.bytesSaved) / 1024).toFixed(1)} KB saved)
